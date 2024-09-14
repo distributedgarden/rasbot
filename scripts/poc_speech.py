@@ -68,18 +68,20 @@ def record_audio(
     logging.info({"message": "Audio recording complete."})
 
 
-def detect_speech(rate: int = 16000, chunk: int = 1024) -> bool:
+def detect_speech(rate: int = 16000, chunk: int = 1024, energy_threshold: int = 300) -> bool:
     """
     Detects speech using Voice Activity Detection (VAD) from the speech_recognition library.
 
     Args:
         - rate (int): Sampling rate in Hz
         - chunk (int): Buffer size in samples
+        - energy_threshold (int): Minimum energy level for considering a sound as speech
 
     Returns:
         - bool: True if speech is detected, False otherwise
     """
     recognizer = sr.Recognizer()
+    recognizer.energy_threshold = energy_threshold
 
     # Use the default microphone as the audio source
     with sr.Microphone(sample_rate=rate, chunk_size=chunk) as source:

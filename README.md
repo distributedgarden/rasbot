@@ -20,8 +20,8 @@ Conversational LLM-based tool-using agent with a robot chassis, sensors for visi
 - `alsa-utils`: audio control package.
 
 ### .bashrc
-Add your OpenAI API key
 ```
+# Add OpenAI API Key
 OPENAI_API_KEY="..."
 ```
 
@@ -37,10 +37,11 @@ OPENAI_API_KEY="..."
 ```
 
 # Hardware
-- Raspberry Pi 5 Model B - 8GB RAM: https://www.adafruit.com/product/4292
-    - v4 or v5 will work
-    - 2GB-8GB RAM will work
+- Raspberry Pi 4 Model B - 2GB RAM: https://www.adafruit.com/product/4292
+    - v4 or v5 will work.
+    - 2GB-8GB RAM will work -- 435Mi used.
 - SanDisk 128GB Ultra USB 3.0 Flash Drive
+    - ~20% used.
 - Pi Camera Module 3: https://www.adafruit.com/product/5657
 - Mini External USB Stereo Speaker: https://www.adafruit.com/product/3369
 - Mini USB Microphone: https://www.adafruit.com/product/3367
