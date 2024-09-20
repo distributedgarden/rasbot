@@ -25,49 +25,33 @@ Conversational LLM-based tool-using agent with a robot chassis, sensors for visi
 OPENAI_API_KEY="..."
 ```
 
-# Run Speech PoC
+# Run PoC Scripts
 ```
 > cd rasbot
 
 > python3 -m venv env
 > source env/bin/activate
 > python3 -m pip install -r requirements.txt
-
+```
+## Speech 
+```
 > python3 scripts/poc_speech.py
 ```
 
-# Run Vision PoC
+## Vision
 ```
-> cd rasbot
-
-> python3 -m venv env
-> source env/bin/activate
-> python3 -m pip install -r requirements.txt
-
 > python3 scripts/poc_vision.py
 ```
-## mediapipe
+### mediapipe
 - `http://<RPi IP>:5000/detection-stream`
 
-# Run Motor PoC
+## DC Motor
 ```
-> cd rasbot
-
-> python3 -m venv env
-> source env/bin/activate
-> python3 -m pip install -r requirements.txt
-
 > python3 scripts/poc_motor.py
 ```
 
-# Run Camera Tilt PoC
+## Camera Tilt
 ```
-> cd rasbot
-
-> python3 -m venv env
-> source env/bin/activate
-> python3 -m pip install -r requirements.txt
-
 > python3 scripts/poc_tilt.py
 ```
 
