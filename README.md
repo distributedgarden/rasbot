@@ -36,6 +36,28 @@ OPENAI_API_KEY="..."
 > python3 scripts/poc_speech.py
 ```
 
+# Run Vision POC
+```
+> cd rasbot
+
+> python3 -m venv env
+> source env/bin/activate
+> python3 -m pip install -r requirements.txt
+
+> python3 scripts/poc_vision.py
+```
+
+# Run Motor POC
+```
+> cd rasbot
+
+> python3 -m venv env
+> source env/bin/activate
+> python3 -m pip install -r requirements.txt
+
+> python3 scripts/poc_motor.py
+```
+
 # Hardware
 - Raspberry Pi 4 Model B - 2GB RAM: https://www.adafruit.com/product/4292
     - v4 or v5 will work.
