@@ -26,7 +26,16 @@ OPENAI_API_KEY="..."
 ```
 
 # Run PoC Scripts
+## RPi Setup
 ```
+# copy files from local machine -> RPi
+# or install git and clone the repository inside the RPi
+scp -r rasbot <username>@<RPi IP>:/target/path
+
+# ssh into RPi
+> ssh username@<RPi IP>
+
+# navigate to the rasbot directory
 > cd rasbot
 
 > python3 -m venv env
