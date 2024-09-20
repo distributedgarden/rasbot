@@ -46,6 +46,12 @@ OPENAI_API_KEY="..."
 
 > python3 scripts/poc_vision.py
 ```
+## mediapipe
+`http://<RPi IP>:5000/capture_mediapipe`
+
+## OpenCV
+`http://<RPi IP>:5000/download_files`: dependencies for Haar Cascades object recognition
+`http://<RPi IP>:5000/capture_haar`
 
 # Run Motor POC
 ```
