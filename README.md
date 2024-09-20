@@ -30,7 +30,7 @@ OPENAI_API_KEY="..."
 ```
 # copy files from local machine -> RPi
 # or install git and clone the repository inside the RPi
-scp -r rasbot <username>@<RPi IP>:/target/path
+> scp -r rasbot <username>@<RPi IP>:/target/path
 
 # ssh into RPi
 > ssh username@<RPi IP>
