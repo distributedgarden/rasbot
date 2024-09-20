@@ -1,144 +1,86 @@
-import os
 import subprocess
 import cv2
+import numpy as np
+from flask import Flask, Response
 import mediapipe as mp
-import urllib.request
-from flask import Flask, Response, jsonify
 
 app = Flask(__name__)
 
-# Paths for Haar Cascade files and captured image
-face_cascade_path = "haarcascade_frontalface_default.xml"
-hand_cascade_path = "hand.xml"
-image_path = "/tmp/latest_frame.jpg"
-
-# MediaPipe hand detection setup
+# MediaPipe Hand Detection setup
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
+# FFmpeg and libcamera commands for video capture
+FRAME_WIDTH = 640
+FRAME_HEIGHT = 480
+FRAME_CHANNELS = 3
+FRAME_SIZE = FRAME_WIDTH * FRAME_HEIGHT * FRAME_CHANNELS
+FFMPEG_CMD = [
+    'ffmpeg', '-i', 'pipe:0', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'
+]
+LIBCAMERA_CMD = [
+    'libcamera-vid', '-t', '0', '--inline', '--width', str(FRAME_WIDTH),
+    '--height', str(FRAME_HEIGHT), '--framerate', '5', '-o', '-'
+]
 
-@app.route("/download_files")
-def download_files():
+def generate_frames():
     """
-    Description:
-        - Requirements for OpenCV
-        - Download the required Haar Cascade XML files for face and hand detection.
+    Generator function that continuously captures video frames, performs hand detection using MediaPipe,
+    and yields the frames as an MJPEG stream.
+
+    Yields:
+        - bytes: The MJPEG stream of video frames with hand landmarks.
     """
-    face_url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml"
-    hand_url = (
-        "https://github.com/Aravindlivewire/Opencv/raw/master/haarcascade/palm.xml"
-    )
+    libcamera_process = subprocess.Popen(LIBCAMERA_CMD, stdout=subprocess.PIPE, bufsize=10**8)
+    ffmpeg_process = subprocess.Popen(FFMPEG_CMD, stdin=libcamera_process.stdout, stdout=subprocess.PIPE, bufsize=10**8)
 
-    urllib.request.urlretrieve(face_url, face_cascade_path)
-    urllib.request.urlretrieve(hand_url, hand_cascade_path)
+    try:
+        while True:
+            # Read a frame from the video stream
+            frame_bytes = ffmpeg_process.stdout.read(FRAME_SIZE)
+            if len(frame_bytes) != FRAME_SIZE:
+                print("Error: Incomplete frame")
+                break
 
-    return jsonify({"message": "Haar cascades downloaded successfully!"})
+            # Convert the frame bytes to a NumPy array and reshape it
+            frame = np.frombuffer(frame_bytes, dtype=np.uint8).reshape((FRAME_HEIGHT, FRAME_WIDTH, FRAME_CHANNELS))
+            frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)  # Convert to BGR for OpenCV
 
+            # Convert frame to RGB for MediaPipe processing
+            frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
-def capture_image():
+            # Perform hand detection using MediaPipe
+            with mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5) as hands:
+                results = hands.process(frame_rgb)
+
+                # Draw hand landmarks on the frame
+                if results.multi_hand_landmarks:
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        mp_drawing.draw_landmarks(frame_bgr, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+            # Encode the frame as JPEG
+            ret, jpeg = cv2.imencode('.jpg', frame_bgr)
+            if not ret:
+                print("Error: Failed to encode frame")
+                break
+
+            # Yield the frame as part of the MJPEG stream
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
+    finally:
+        ffmpeg_process.terminate()
+        libcamera_process.terminate()
+
+@app.route('/detection-stream')
+def hand_detection_stream():
     """
-    Description:
-        - Capture a single image using libcamera-still and save it to /tmp/latest_frame.jpg.
+    Stream video with hand and finger detection using MediaPipe.
+
+    Returns:
+        - Response: The MJPEG stream of video frames with hand landmarks.
     """
-    command = [
-        "libcamera-still",
-        "-o",
-        image_path,
-        "--width",
-        "640",
-        "--height",
-        "480",
-        "--nopreview",
-    ]
-    subprocess.run(command)
-
-
-def detect_objects(img):
-    """
-    Description:
-        - Detect faces and hands using Haar cascades and draw rectangles around them.
-    """
-    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    face_cascade = cv2.CascadeClassifier(face_cascade_path)
-    hand_cascade = cv2.CascadeClassifier(hand_cascade_path)
-
-    # Detection
-    faces = face_cascade.detectMultiScale(
-        gray_img, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
-    )
-    hands = hand_cascade.detectMultiScale(
-        gray_img, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50)
-    )
-
-    # Draw rectangles
-    for x, y, w, h in faces:
-        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
-
-    for x, y, w, h in hands:
-        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-    return img
-
-
-@app.route("/capture_haar")
-def capture_haar():
-    """
-    Description:
-        - Capture an image, perform face and hand detection using Haar Cascades, and return the processed image.
-    """
-    capture_image()
-
-    img = cv2.imread(image_path)
-    if img is None:
-        return "Failed to capture image", 500
-
-    # Detect objects (faces and hands) in the image
-    img_with_detections = detect_objects(img)
-
-    # Encode the processed image to JPEG
-    ret, jpeg = cv2.imencode(".jpg", img_with_detections)
-    if not ret:
-        return "Failed to encode image", 500
-
-    return Response(jpeg.tobytes(), mimetype="image/jpeg")
-
-
-@app.route("/capture_mediapipe")
-def capture_mediapipe():
-    """
-    Description:
-        - Capture an image, perform hand detection using MediaPipe, and return the processed image.
-    """
-    capture_image()
-
-    img = cv2.imread(image_path)
-    if img is None:
-        return "Failed to capture image", 500
-
-    # Convert the image to RGB (MediaPipe works with RGB images)
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    # Initialize MediaPipe hands model
-    with mp_hands.Hands(
-        static_image_mode=True, max_num_hands=2, min_detection_confidence=0.5
-    ) as hands:
-        results = hands.process(img_rgb)
-
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                # Draw hand landmarks on the image
-                mp_drawing.draw_landmarks(
-                    img, hand_landmarks, mp_hands.HAND_CONNECTIONS
-                )
-
-    # Encode the processed image to JPEG
-    ret, jpeg = cv2.imencode(".jpg", img)
-    if not ret:
-        return "Failed to encode image", 500
-
-    return Response(jpeg.tobytes(), mimetype="image/jpeg")
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host='0.0.0.0', port=5000)
